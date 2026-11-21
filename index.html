@@ -32,30 +32,31 @@ html, body {
 const canvas = document.getElementById("game");
 const engine = new BABYLON.Engine(canvas, true);
 
-function hill(x, z, cx, cz, height, width) {
-  const dx = (x - cx) / width;
-  const dz = (z - cz) / width;
-  return height * Math.exp(-(dx * dx + dz * dz) * 0.5);
+function hill(x, z, cx, cz, height, widthX, widthZ) {
+  const dx = (x - cx) / widthX;
+  const dz = (z - cz) / widthZ;
+  return height * Math.exp(-0.5 * (dx * dx + dz * dz));
 }
 
-// RASHAYA-INSPIRED TERRAIN
+// NATURAL LEBANESE-INSPIRED HILLS
 function terrainHeight(x, z) {
   let h = 0;
 
-  // Gentle natural rolling ground
-  h += 1.8 * Math.sin(x * 0.025) * Math.cos(z * 0.025);
-  h += 1.2 * Math.sin((x + z) * 0.035);
+  // Gentle uneven countryside
+  h += 1.2 * Math.sin(x * 0.035) * Math.cos(z * 0.03);
+  h += 0.8 * Math.sin((x + z) * 0.045);
 
-  // Broad Lebanese hills
-  h += hill(x, z, -85, -35, 17, 38);
-  h += hill(x, z, -45, 65, 14, 42);
-  h += hill(x, z, 60, 75, 21, 45);
-  h += hill(x, z, 85, -35, 17, 38);
-  h += hill(x, z, -75, 105, 13, 40);
-  h += hill(x, z, 55, -105, 15, 42);
+  // Large, rounded hills
+  h += hill(x, z, -95, -65, 24, 55, 48);
+  h += hill(x, z, -45, 55, 19, 58, 52);
+  h += hill(x, z, 65, 65, 28, 62, 55);
+  h += hill(x, z, 95, -45, 23, 55, 60);
+  h += hill(x, z, -90, 115, 18, 48, 55);
+  h += hill(x, z, 35, -115, 21, 55, 50);
+  h += hill(x, z, 125, 110, 17, 48, 52);
 
-  // A lower valley through the middle
-  h -= hill(x, z, 0, 5, 3.5, 45);
+  // Open valley in the middle
+  h -= hill(x, z, 0, 0, 2, 55, 45);
 
   return h;
 }
@@ -79,13 +80,14 @@ const createScene = function () {
   );
   sun.intensity = 0.55;
 
-  // CREATE TERRAIN
+  // CREATE UPDATABLE TERRAIN
   const ground = BABYLON.MeshBuilder.CreateGround(
     "ground",
     {
       width: 300,
       height: 300,
-      subdivisions: 150
+      subdivisions: 180,
+      updatable: true
     },
     scene
   );
@@ -103,9 +105,11 @@ const createScene = function () {
 
   ground.updateVerticesData(
     BABYLON.VertexBuffer.PositionKind,
-    positions
+    positions,
+    true
   );
 
+  // RECALCULATE TERRAIN NORMALS
   const indices = ground.getIndices();
   const normals = [];
 
@@ -149,7 +153,7 @@ const createScene = function () {
 
   ground.material = groundMat;
 
-  // TERRAIN COLLISIONS
+  // COLLISIONS
   scene.collisionsEnabled = true;
   ground.checkCollisions = true;
 
@@ -158,10 +162,7 @@ const createScene = function () {
     "mountainMat",
     scene
   );
-
-  mountainMat.diffuseColor = new BABYLON.Color3(
-    0.39, 0.40, 0.38
-  );
+  mountainMat.diffuseColor = new BABYLON.Color3(0.39, 0.40, 0.38);
 
   for (let i = 0; i < 18; i++) {
     const angle = (i / 18) * Math.PI * 2;
@@ -175,11 +176,7 @@ const createScene = function () {
 
     const size = 25 + Math.random() * 25;
 
-    mountain.scaling.set(
-      size,
-      size * 1.7,
-      size * 0.8
-    );
+    mountain.scaling.set(size, size * 1.7, size * 0.8);
 
     mountain.position.set(
       Math.cos(angle) * distance,
@@ -191,14 +188,8 @@ const createScene = function () {
   }
 
   // ROCKS
-  const rockMat = new BABYLON.StandardMaterial(
-    "rockMat",
-    scene
-  );
-
-  rockMat.diffuseColor = new BABYLON.Color3(
-    0.42, 0.41, 0.37
-  );
+  const rockMat = new BABYLON.StandardMaterial("rockMat", scene);
+  rockMat.diffuseColor = new BABYLON.Color3(0.42, 0.41, 0.37);
 
   for (let i = 0; i < 28; i++) {
     const rock = BABYLON.MeshBuilder.CreateSphere(
