@@ -5,284 +5,132 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Wilderness</title>
+
 <style>
-html,body {
-  width:100%;
-  height:100%;
-  margin:0;
-  overflow:hidden;
-  background:#87b9df;
-  font-family:Arial,sans-serif;
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: #87b9df;
+  font-family: Arial, sans-serif;
 }
 #game {
-  width:100%;
-  height:100%;
-  touch-action:none;
-  display:block;
-}
-#info {
-  position:absolute;
-  top:12px;
-  left:12px;
-  color:white;
-  background:#17291dcc;
-  padding:12px 16px;
-  border-radius:8px;
-  font-size:13px;
-  pointer-events:none;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
 }
 </style>
-</head>
-<body>
-
-<div id="info">
-  <b>THE WILDERNESS</b><br>
-  Bakkifa — First Environment<br>
-  WASD: Move | Mouse: Look | ESC: Release mouse
-</div>
-
-<canvas id="game"></canvas>
 
 <script src="https://cdn.babylonjs.com/babylon.js"></script>
-<script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+</head>
+
+<body>
+<canvas id="game"></canvas>
 
 <script>
 const canvas = document.getElementById("game");
+const engine = new BABYLON.Engine(canvas, true);
 
-const engine = new BABYLON.Engine(canvas, false, {
-  preserveDrawingBuffer:false,
-  stencil:false,
-  antialias:false
-});
-
-const createGame = () => {
+const createScene = function () {
   const scene = new BABYLON.Scene(engine);
+  scene.clearColor = new BABYLON.Color4(0.53, 0.73, 0.87, 1);
 
-  scene.clearColor = new BABYLON.Color4(0.53,0.72,0.88,1);
-  scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
-  scene.fogDensity = 0.0025;
-  scene.fogColor = new BABYLON.Color3(0.65,0.76,0.82);
+  // LIGHTING
+  const light = new BABYLON.HemisphericLight(
+    "light",
+    new BABYLON.Vector3(0, 1, 0),
+    scene
+  );
+  light.intensity = 0.9;
 
-  const camera = new BABYLON.UniversalCamera(
-    "player", new BABYLON.Vector3(0,4,-12), scene
+  // GROUND
+  const ground = BABYLON.MeshBuilder.CreateGround(
+    "ground",
+    { width: 300, height: 300, subdivisions: 85 },
+    scene
   );
 
-  camera.attachControl(canvas,true);
-  camera.speed = 0.35;
-  camera.angularSensibility = 3000;
-  camera.applyGravity = true;
-  camera.checkCollisions = true;
-  camera.ellipsoid = new BABYLON.Vector3(0.6,1.2,0.6);
+  const groundMat = new BABYLON.StandardMaterial("groundMat", scene);
+  groundMat.diffuseColor = new BABYLON.Color3(0.35, 0.43, 0.27);
+  ground.material = groundMat;
+
+  // MOUNTAINS
+  const mountainMat = new BABYLON.StandardMaterial("mountainMat", scene);
+  mountainMat.diffuseColor = new BABYLON.Color3(0.38, 0.39, 0.36);
+
+  for (let i = 0; i < 18; i++) {
+    const angle = (i / 18) * Math.PI * 2;
+    const distance = 115;
+
+    const mountain = BABYLON.MeshBuilder.CreateSphere(
+      "mountain",
+      { diameter: 1, segments: 5 },
+      scene
+    );
+
+    const size = 25 + Math.random() * 20;
+    mountain.scaling.set(size, size * 1.8, size);
+    mountain.position.set(
+      Math.cos(angle) * distance,
+      size * 0.8,
+      Math.sin(angle) * distance
+    );
+    mountain.material = mountainMat;
+  }
+
+  // ROCKS ONLY — NO TREES
+  const rockMat = new BABYLON.StandardMaterial("rockMat", scene);
+  rockMat.diffuseColor = new BABYLON.Color3(0.42, 0.41, 0.37);
+
+  for (let i = 0; i < 28; i++) {
+    const rock = BABYLON.MeshBuilder.CreateSphere(
+      "rock",
+      { diameter: 1, segments: 5 },
+      scene
+    );
+
+    const size = 1 + Math.random() * 3;
+    rock.scaling.set(size, size * 0.6, size);
+    rock.position.set(
+      Math.random() * 180 - 90,
+      size * 0.25,
+      Math.random() * 180 - 90
+    );
+    rock.material = rockMat;
+  }
+
+  // FIRST-PERSON CAMERA
+  const camera = new BABYLON.UniversalCamera(
+    "camera",
+    new BABYLON.Vector3(0, 2, -12),
+    scene
+  );
+
+  camera.attachControl(canvas, true);
+  camera.speed = 0.5;
+  camera.angularSensibility = 4000;
   camera.keysUp.push(87);
   camera.keysDown.push(83);
   camera.keysLeft.push(65);
   camera.keysRight.push(68);
+  camera.minZ = 0.1;
 
-  scene.gravity = new BABYLON.Vector3(0,-0.25,0);
-
-  const light = new BABYLON.HemisphericLight(
-    "skyLight",new BABYLON.Vector3(0,1,0),scene
-  );
-  light.intensity = 0.9;
-
-  const sun = new BABYLON.DirectionalLight(
-    "sun",new BABYLON.Vector3(-0.5,-1,0.4),scene
-  );
-  sun.intensity = 0.7;
-
-  function material(name,color) {
-    const m = new BABYLON.StandardMaterial(name,scene);
-    m.diffuseColor = color;
-    return m;
-  }
-
-  const grass = material("Grass",
-    new BABYLON.Color3(0.24,0.39,0.17));
-
-  const rockMat = material("Rock",
-    new BABYLON.Color3(0.38,0.39,0.34));
-
-  // TERRAIN
-
-  const ground = BABYLON.MeshBuilder.CreateGround("terrain",{
-    width:220,
-    height:220,
-    subdivisions:85
-  },scene);
-
-  const positions = ground.getVerticesData(
-    BABYLON.VertexBuffer.PositionKind
-  );
-
-  for(let i=0;i<positions.length;i+=3) {
-    const x=positions[i], z=positions[i+2];
-
-    const hills =
-      Math.sin(x*0.035)*1.5 +
-      Math.cos(z*0.04)*1.3 +
-      Math.sin((x+z)*0.025)*1.2;
-
-    const hill1 = 5*Math.exp(
-      -((x-38)**2+(z-35)**2)/1000
-    );
-
-    const hill2 = 4*Math.exp(
-      -((x+45)**2+(z-10)**2)/1200
-    );
-
-    positions[i+1] = hills+hill1+hill2;
-  }
-
-  ground.updateVerticesData(
-    BABYLON.VertexBuffer.PositionKind,positions
-  );
-
-  const indices=ground.getIndices();
-  const normals=[];
-
-  BABYLON.VertexData.ComputeNormals(
-    positions,indices,normals
-  );
-
-  ground.updateVerticesData(
-    BABYLON.VertexBuffer.NormalKind,normals
-  );
-
-  ground.material=grass;
-  ground.checkCollisions=true;
-
-  function terrainHeight(x,z) {
-    return Math.sin(x*0.035)*1.5+
-      Math.cos(z*0.04)*1.3+
-      Math.sin((x+z)*0.025)*1.2+
-      5*Math.exp(-((x-38)**2+(z-35)**2)/1000)+
-      4*Math.exp(-((x+45)**2+(z-10)**2)/1200);
-  }
-
-  // DISTANT MOUNTAINS
-
-  for(let i=0;i<18;i++) {
-    const angle=i/18*Math.PI*2;
-    const distance=100+(i%3)*8;
-
-    const mountain=BABYLON.MeshBuilder.CreateSphere(
-      "mountain",{diameter:1,segments:6},scene
-    );
-
-    mountain.position.set(
-      Math.cos(angle)*distance,
-      13+(i%4)*3,
-      Math.sin(angle)*distance
-    );
-
-    mountain.scaling.set(
-      19+i%4*5,
-      30+i%5*5,
-      18+i%3*5
-    );
-
-    mountain.material=rockMat;
-  }
-
-  // SCATTERED ROCKS
-
-  for(let i=0;i<28;i++) {
-    const x=(Math.random()-0.5)*170;
-    const z=(Math.random()-0.5)*170;
-
-    const rock=BABYLON.MeshBuilder.CreateSphere(
-      "stone",{diameter:1,segments:5},scene
-    );
-
-    rock.position.set(
-      x,
-      terrainHeight(x,z)+0.3,
-      z
-    );
-
-    rock.scaling.set(
-      1.5+Math.random(),
-      0.5+Math.random(),
-      1
-    );
-
-    rock.material=rockMat;
-  }
-
-  // IMPORTED FOREST AREAS
-
-  async function addForest(x,z,scale) {
-    const result = await BABYLON.SceneLoader.ImportMeshAsync(
-      "",
-      "./",
-      "model.glb",
-      scene
-    );
-
-    const forestGroup = new BABYLON.TransformNode(
-      "Forest Area",
-      scene
-    );
-
-    const importedNodes = [
-      ...result.transformNodes,
-      ...result.meshes
-    ];
-
-    const importedSet = new Set(importedNodes);
-
-    const roots = importedNodes.filter(node =>
-      !node.parent || !importedSet.has(node.parent)
-    );
-
-    roots.forEach(node => {
-      node.position = node.position.clone();
-      node.parent = forestGroup;
-    });
-
-    forestGroup.position.set(x,0,z);
-    forestGroup.scaling.setAll(scale);
-
-    forestGroup.computeWorldMatrix(true);
-
-    console.log("Forest area loaded:",x,z);
-    console.log("Imported meshes:",result.meshes.length);
-    console.log("Forest position:",forestGroup.position.asArray());
-  }
-
-  async function loadForests() {
-    const locations = [
-      {x:0, z:0, scale:1},
-      {x:-42, z:30, scale:0.85},
-      {x:42, z:35, scale:0.9},
-      {x:-35, z:-40, scale:0.8}
-    ];
-
-    for(const location of locations) {
-      try {
-        await addForest(
-          location.x,
-          location.z,
-          location.scale
-        );
-      } catch(error) {
-        console.error("Forest loading failed:",error);
-      }
-    }
-  }
-
-  loadForests();
+  scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
+  scene.fogDensity = 0.002;
+  scene.fogColor = new BABYLON.Color3(0.53, 0.73, 0.87);
 
   return scene;
 };
 
-const scene=createGame();
+const scene = createScene();
 
-engine.runRenderLoop(()=>{
+engine.runRenderLoop(function () {
   scene.render();
 });
 
-window.addEventListener("resize",()=>{
+window.addEventListener("resize", function () {
   engine.resize();
 });
 </script>
