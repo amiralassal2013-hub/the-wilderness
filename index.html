@@ -48,6 +48,7 @@ html,body {
 
 <script>
 const canvas = document.getElementById("game");
+
 const engine = new BABYLON.Engine(canvas, false, {
   preserveDrawingBuffer:false,
   stencil:false,
@@ -65,6 +66,7 @@ const createGame = () => {
   const camera = new BABYLON.UniversalCamera(
     "player", new BABYLON.Vector3(0,4,-12), scene
   );
+
   camera.attachControl(canvas,true);
   camera.speed = 0.35;
   camera.angularSensibility = 3000;
@@ -96,19 +98,28 @@ const createGame = () => {
 
   const grass = material("Grass",
     new BABYLON.Color3(0.24,0.39,0.17));
+
   const trunk = material("Tree Bark",
     new BABYLON.Color3(0.27,0.16,0.09));
+
   const leaves = material("Leaves",
     new BABYLON.Color3(0.12,0.29,0.12));
+
   const leaves2 = material("Light Leaves",
     new BABYLON.Color3(0.19,0.36,0.16));
+
   const birdMat = material("Bird Feathers",
     new BABYLON.Color3(0.76,0.75,0.68));
+
   const rockMat = material("Rock",
     new BABYLON.Color3(0.38,0.39,0.34));
 
+  // TERRAIN
+
   const ground = BABYLON.MeshBuilder.CreateGround("terrain",{
-    width:220,height:220,subdivisions:85
+    width:220,
+    height:220,
+    subdivisions:85
   },scene);
 
   const positions = ground.getVerticesData(
@@ -117,6 +128,7 @@ const createGame = () => {
 
   for(let i=0;i<positions.length;i+=3) {
     const x=positions[i], z=positions[i+2];
+
     const hills =
       Math.sin(x*0.035)*1.5 +
       Math.cos(z*0.04)*1.3 +
@@ -125,6 +137,7 @@ const createGame = () => {
     const hill1 = 5*Math.exp(
       -((x-38)**2+(z-35)**2)/1000
     );
+
     const hill2 = 4*Math.exp(
       -((x+45)**2+(z-10)**2)/1200
     );
@@ -135,12 +148,18 @@ const createGame = () => {
   ground.updateVerticesData(
     BABYLON.VertexBuffer.PositionKind,positions
   );
+
   const indices=ground.getIndices();
   const normals=[];
-  BABYLON.VertexData.ComputeNormals(positions,indices,normals);
+
+  BABYLON.VertexData.ComputeNormals(
+    positions,indices,normals
+  );
+
   ground.updateVerticesData(
     BABYLON.VertexBuffer.NormalKind,normals
   );
+
   ground.material=grass;
   ground.checkCollisions=true;
 
@@ -152,57 +171,89 @@ const createGame = () => {
       4*Math.exp(-((x+45)**2+(z-10)**2)/1200);
   }
 
+  // DISTANT MOUNTAINS
+
   for(let i=0;i<18;i++) {
     const angle=i/18*Math.PI*2;
     const distance=100+(i%3)*8;
+
     const mountain=BABYLON.MeshBuilder.CreateSphere(
       "mountain",{diameter:1,segments:6},scene
     );
+
     mountain.position.set(
       Math.cos(angle)*distance,
       13+(i%4)*3,
       Math.sin(angle)*distance
     );
-    mountain.scaling.set(19+i%4*5,30+i%5*5,18+i%3*5);
+
+    mountain.scaling.set(
+      19+i%4*5,
+      30+i%5*5,
+      18+i%3*5
+    );
+
     mountain.material=rockMat;
   }
+
+  // SCATTERED TREES
 
   function makeTree(x,z,scale) {
     const y=terrainHeight(x,z);
 
     const wood=BABYLON.MeshBuilder.CreateCylinder(
-      "tree trunk",{height:5*scale,diameter:0.55*scale},scene
+      "tree trunk",{
+        height:5*scale,
+        diameter:0.55*scale
+      },scene
     );
+
     wood.position.set(x,y+2.5*scale,z);
     wood.material=trunk;
 
     const top=BABYLON.MeshBuilder.CreateCylinder(
-      "tree crown",{height:6*scale,
-      diameterTop:0,diameterBottom:5*scale,
-      tessellation:7},scene
+      "tree crown",{
+        height:6*scale,
+        diameterTop:0,
+        diameterBottom:5*scale,
+        tessellation:7
+      },scene
     );
+
     top.position.set(x,y+6*scale,z);
     top.material=leaves;
 
     const middle=BABYLON.MeshBuilder.CreateCylinder(
-      "tree leaves",{height:5*scale,
-      diameterTop:0,diameterBottom:4*scale,
-      tessellation:7},scene
+      "tree leaves",{
+        height:5*scale,
+        diameterTop:0,
+        diameterBottom:4*scale,
+        tessellation:7
+      },scene
     );
+
     middle.position.set(x,y+8*scale,z);
     middle.material=leaves2;
 
     if(Math.random()<0.22) {
       const bird=BABYLON.MeshBuilder.CreateSphere(
-        "resting bird",{diameter:0.65*scale,segments:6},scene
+        "resting bird",{
+          diameter:0.65*scale,
+          segments:6
+        },scene
       );
+
       bird.scaling.set(1,0.65,1.5);
       bird.position.set(x+1.1*scale,y+7.5*scale,z);
       bird.material=birdMat;
 
       const wing=BABYLON.MeshBuilder.CreateSphere(
-        "bird wing",{diameter:0.4*scale,segments:5},scene
+        "bird wing",{
+          diameter:0.4*scale,
+          segments:5
+        },scene
       );
+
       wing.scaling.set(1.7,0.3,0.8);
       wing.position.set(x+1.1*scale,y+7.7*scale,z);
       wing.material=leaves2;
@@ -212,33 +263,95 @@ const createGame = () => {
   for(let i=0;i<65;i++) {
     const x=(Math.random()-0.5)*170;
     const z=(Math.random()-0.5)*170;
+
     if(Math.sqrt(x*x+(z+12)*(z+12))<11) continue;
+
     makeTree(x,z,0.8+Math.random()*0.65);
   }
+
+  // SCATTERED ROCKS
 
   for(let i=0;i<28;i++) {
     const x=(Math.random()-0.5)*170;
     const z=(Math.random()-0.5)*170;
+
     const rock=BABYLON.MeshBuilder.CreateSphere(
       "stone",{diameter:1,segments:5},scene
     );
-    rock.position.set(x,terrainHeight(x,z)+0.3,z);
-    rock.scaling.set(1.5+Math.random(),0.5+Math.random(),1);
+
+    rock.position.set(
+      x,
+      terrainHeight(x,z)+0.3,
+      z
+    );
+
+    rock.scaling.set(
+      1.5+Math.random(),
+      0.5+Math.random(),
+      1
+    );
+
     rock.material=rockMat;
   }
 
-  BABYLON.SceneLoader.Append(
-    "./",
-    "model.glb",
-    scene,
-    function () {
-      console.log("Forest loaded successfully!");
-    },
-    null,
-    function (scene,message) {
-      console.error("Forest loading failed:",message);
+  // IMPORTED FOREST AREAS
+
+  async function addForest(x,z,scale) {
+    const result = await BABYLON.SceneLoader.ImportMeshAsync(
+      "",
+      "./",
+      "model.glb",
+      scene
+    );
+
+    const importedNodes = [
+      ...result.transformNodes,
+      ...result.meshes
+    ];
+
+    const importedSet = new Set(importedNodes);
+
+    const roots = importedNodes.filter(node =>
+      !node.parent || !importedSet.has(node.parent)
+    );
+
+    const forestGroup = new BABYLON.TransformNode(
+      "Forest Area",
+      scene
+    );
+
+    roots.forEach(node => {
+      node.parent = forestGroup;
+    });
+
+    forestGroup.position.set(x,0,z);
+    forestGroup.scaling.setAll(scale);
+
+    console.log("Forest area loaded:",x,z);
+  }
+
+  async function loadForests() {
+    const locations = [
+      {x:0, z:0, scale:1},
+      {x:-42, z:30, scale:0.85},
+      {x:42, z:35, scale:0.9},
+      {x:-35, z:-40, scale:0.8}
+    ];
+
+    for(const location of locations) {
+      try {
+        await addForest(
+          location.x,
+          location.z,
+          location.scale
+        );
+      } catch(error) {
+        console.error("Forest loading failed:",error);
+      }
     }
-  );
+  }
+
+  loadForests();
 
   return scene;
 };
