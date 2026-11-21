@@ -256,11 +256,11 @@ const createScene = function () {
   }
 
   // Distribute clumps unevenly in patches, leaving natural bare areas.
-  const patchCount = 34;
+  const patchCount = 65;
   for (let p = 0; p < patchCount; p++) {
     const centerX = Math.random() * 250 - 125;
     const centerZ = Math.random() * 250 - 125;
-    const clumpsInPatch = 12 + Math.floor(Math.random() * 15);
+    const clumpsInPatch = 22 + Math.floor(Math.random() * 19);
     for (let i = 0; i < clumpsInPatch; i++) {
       const source = grassSources[Math.floor(Math.random() * grassSources.length)];
       const x = centerX + (Math.random() - 0.5) * 18;
