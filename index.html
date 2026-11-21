@@ -280,41 +280,67 @@ const createScene = function () {
   }
   grassSources.forEach(mesh => mesh.freezeWorldMatrix());
 
-  // PINE TREES: load the lightweight Poly Haven sapling model and reuse its geometry.
-  BABYLON.SceneLoader.ImportMeshAsync(
-    "",
-    "./",
-    "pine_sapling_small_1k.gltf",
-    scene
-  ).then(function (result) {
-    const sourceRoot = result.rootNodes[0];
-    if (!sourceRoot) return;
+  // PINE FOREST: lightweight procedural trees that do not depend on external files.
+  const pineTrunkMat = new BABYLON.StandardMaterial("pineTrunkMat", scene);
+  pineTrunkMat.diffuseColor = new BABYLON.Color3(0.25, 0.15, 0.08);
+  pineTrunkMat.specularColor = BABYLON.Color3.Black();
 
-    // Place small groups around the hills and forest edges, leaving the starting valley open.
-    const treeSpots = [
-      [-72, -92], [-105, -25], [-82, 38], [-48, 105],
-      [48, 105], [82, 35], [108, -28], [72, -100],
-      [-125, 82], [125, 78], [-118, -100], [118, -105]
-    ];
+  const pineLeafMats = [];
+  [
+    new BABYLON.Color3(0.10, 0.24, 0.10),
+    new BABYLON.Color3(0.14, 0.31, 0.13),
+    new BABYLON.Color3(0.18, 0.35, 0.15)
+  ].forEach(function (color, i) {
+    const mat = new BABYLON.StandardMaterial("pineLeafMat" + i, scene);
+    mat.diffuseColor = color;
+    mat.specularColor = BABYLON.Color3.Black();
+    pineLeafMats.push(mat);
+  });
 
-    treeSpots.forEach(function (spot, index) {
-      const tree = sourceRoot.clone("pineGroup" + index);
-      if (!tree) return;
-      tree.setEnabled(true);
-      tree.position.set(
-        spot[0],
-        terrainHeight(spot[0], spot[1]),
-        spot[1]
+  const pinePositions = [
+    [-72,-92],[-105,-25],[-82,38],[-48,105],
+    [48,105],[82,35],[108,-28],[72,-100],
+    [-125,82],[125,78],[-118,-100],[118,-105],
+    [-95,-65],[-112,15],[-65,72],[-28,125],
+    [28,125],[65,72],[112,15],[95,-65],
+    [-138,-42],[138,-42],[-138,42],[138,42],
+    [-100,115],[100,115],[-100,-125],[100,-125],
+    [-55,-130],[55,-130],[-145,0],[145,0]
+  ];
+
+  pinePositions.forEach(function (spot, index) {
+    const x = spot[0];
+    const z = spot[1];
+    const tree = new BABYLON.TransformNode("pineTree" + index, scene);
+    tree.position.set(x, terrainHeight(x, z), z);
+    const scale = 0.85 + (index % 5) * 0.12;
+    tree.scaling.set(scale, scale, scale);
+    tree.rotation.y = (index * 2.17) % (Math.PI * 2);
+
+    const trunk = BABYLON.MeshBuilder.CreateCylinder(
+      "pineTrunk" + index,
+      { height: 4.2, diameterTop: 0.22, diameterBottom: 0.48, tessellation: 7 },
+      scene
+    );
+    trunk.parent = tree;
+    trunk.position.y = 2.1;
+    trunk.material = pineTrunkMat;
+
+    [1.5, 2.35, 3.15].forEach(function (height, layer) {
+      const foliage = BABYLON.MeshBuilder.CreateCylinder(
+        "pineFoliage" + index + "_" + layer,
+        {
+          height: 2.8 - layer * 0.35,
+          diameterTop: 0,
+          diameterBottom: 3.1 - layer * 0.48,
+          tessellation: 7
+        },
+        scene
       );
-      const scale = 5.2 + (index % 4) * 0.45;
-      tree.scaling.set(scale, scale, scale);
-      tree.rotation.y = (index * 1.73) % (Math.PI * 2);
+      foliage.parent = tree;
+      foliage.position.y = height;
+      foliage.material = pineLeafMats[(index + layer) % pineLeafMats.length];
     });
-
-    // Keep the imported template hidden; the visible copies share its geometry.
-    sourceRoot.setEnabled(false);
-  }).catch(function (error) {
-    console.error("Pine tree loading error:", error);
   });
 
   // FIRST-PERSON CAMERA
