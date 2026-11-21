@@ -23,6 +23,7 @@ html, body {
 </style>
 
 <script src="https://cdn.babylonjs.com/babylon.js"></script>
+<script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
 </head>
 
 <body>
@@ -278,6 +279,43 @@ const createScene = function () {
     }
   }
   grassSources.forEach(mesh => mesh.freezeWorldMatrix());
+
+  // PINE TREES: load the lightweight Poly Haven sapling model and reuse its geometry.
+  BABYLON.SceneLoader.ImportMeshAsync(
+    "",
+    "./",
+    "pine_sapling_small_1k.gltf",
+    scene
+  ).then(function (result) {
+    const sourceRoot = result.rootNodes[0];
+    if (!sourceRoot) return;
+
+    // Place small groups around the hills and forest edges, leaving the starting valley open.
+    const treeSpots = [
+      [-72, -92], [-105, -25], [-82, 38], [-48, 105],
+      [48, 105], [82, 35], [108, -28], [72, -100],
+      [-125, 82], [125, 78], [-118, -100], [118, -105]
+    ];
+
+    treeSpots.forEach(function (spot, index) {
+      const tree = sourceRoot.clone("pineGroup" + index);
+      if (!tree) return;
+      tree.setEnabled(true);
+      tree.position.set(
+        spot[0],
+        terrainHeight(spot[0], spot[1]),
+        spot[1]
+      );
+      const scale = 5.2 + (index % 4) * 0.45;
+      tree.scaling.set(scale, scale, scale);
+      tree.rotation.y = (index * 1.73) % (Math.PI * 2);
+    });
+
+    // Keep the imported template hidden; the visible copies share its geometry.
+    sourceRoot.setEnabled(false);
+  }).catch(function (error) {
+    console.error("Pine tree loading error:", error);
+  });
 
   // FIRST-PERSON CAMERA
   const startX = 0;
