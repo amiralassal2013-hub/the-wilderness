@@ -44,18 +44,55 @@ const createScene = function () {
   );
   light.intensity = 0.9;
 
-  // GROUND
+  // TERRAIN HEIGHT FUNCTION
+  function terrainHeight(x, z) {
+    return (
+      3.0 * Math.sin(x * 0.035) * Math.cos(z * 0.03) +
+      1.8 * Math.sin((x + z) * 0.045) +
+      1.2 * Math.cos(z * 0.065) * Math.sin(x * 0.025)
+    );
+  }
+
+  // HILLY GROUND
   const ground = BABYLON.MeshBuilder.CreateGround(
     "ground",
-    { width: 300, height: 300, subdivisions: 85 },
+    { width: 300, height: 300, subdivisions: 100 },
     scene
   );
 
+  const positions = ground.getVerticesData(
+    BABYLON.VertexBuffer.PositionKind
+  );
+
+  for (let i = 0; i < positions.length; i += 3) {
+    const x = positions[i];
+    const z = positions[i + 2];
+    positions[i + 1] = terrainHeight(x, z);
+  }
+
+  ground.updateVerticesData(
+    BABYLON.VertexBuffer.PositionKind,
+    positions
+  );
+
+  const indices = ground.getIndices();
+  const normals = [];
+  BABYLON.VertexData.ComputeNormals(
+    positions,
+    indices,
+    normals
+  );
+
+  ground.updateVerticesData(
+    BABYLON.VertexBuffer.NormalKind,
+    normals
+  );
+
+  // GROUND TEXTURE
   const groundMat = new BABYLON.StandardMaterial("groundMat", scene);
-  groundMat.diffuseColor = new BABYLON.Color3(0.35, 0.43, 0.27);
+  groundMat.diffuseColor = new BABYLON.Color3(1, 1, 1);
   groundMat.specularColor = new BABYLON.Color3(0.05, 0.05, 0.05);
 
-  // IMAGE IS IN THE MAIN REPOSITORY FOLDER
   const groundTexture = new BABYLON.Texture(
     "forrest_ground_01_diff_1k.jpg",
     scene,
@@ -68,11 +105,15 @@ const createScene = function () {
       groundTexture.vScale = 12;
     },
     function (message, exception) {
-      console.error("Ground texture failed to load:", message, exception);
+      console.error("Ground texture failed:", message, exception);
     }
   );
 
   ground.material = groundMat;
+
+  // TERRAIN COLLISIONS
+  scene.collisionsEnabled = true;
+  ground.checkCollisions = true;
 
   // MOUNTAINS
   const mountainMat = new BABYLON.StandardMaterial("mountainMat", scene);
@@ -110,30 +151,46 @@ const createScene = function () {
     );
 
     const size = 1 + Math.random() * 3;
+    const x = Math.random() * 180 - 90;
+    const z = Math.random() * 180 - 90;
+
     rock.scaling.set(size, size * 0.6, size);
     rock.position.set(
-      Math.random() * 180 - 90,
-      size * 0.25,
-      Math.random() * 180 - 90
+      x,
+      terrainHeight(x, z) + size * 0.25,
+      z
     );
     rock.material = rockMat;
   }
 
   // FIRST-PERSON CAMERA
+  const startX = 0;
+  const startZ = -12;
+
   const camera = new BABYLON.UniversalCamera(
     "camera",
-    new BABYLON.Vector3(0, 2, -12),
+    new BABYLON.Vector3(
+      startX,
+      terrainHeight(startX, startZ) + 2.5,
+      startZ
+    ),
     scene
   );
 
   camera.attachControl(canvas, true);
-  camera.speed = 0.5;
+  camera.speed = 0.35;
   camera.angularSensibility = 4000;
   camera.keysUp.push(87);
   camera.keysDown.push(83);
   camera.keysLeft.push(65);
   camera.keysRight.push(68);
   camera.minZ = 0.1;
+
+  camera.checkCollisions = true;
+  camera.applyGravity = true;
+  camera.ellipsoid = new BABYLON.Vector3(0.5, 1, 0.5);
+  camera.ellipsoidOffset = new BABYLON.Vector3(0, 1, 0);
+  scene.gravity = new BABYLON.Vector3(0, -0.15, 0);
 
   // DISTANCE FOG
   scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
@@ -153,5 +210,7 @@ window.addEventListener("resize", function () {
   engine.resize();
 });
 </script>
+</body>
+</html>
 </body>
 </html>
