@@ -304,6 +304,14 @@ const createGame = () => {
       scene
     );
 
+    // Create a container without changing the imported hierarchy.
+    const forestGroup = new BABYLON.TransformNode(
+      "Forest Area",
+      scene
+    );
+
+    // Keep each imported mesh in its original hierarchy.
+    // Move only the top-level imported nodes.
     const importedNodes = [
       ...result.transformNodes,
       ...result.meshes
@@ -315,19 +323,19 @@ const createGame = () => {
       !node.parent || !importedSet.has(node.parent)
     );
 
-    const forestGroup = new BABYLON.TransformNode(
-      "Forest Area",
-      scene
-    );
-
     roots.forEach(node => {
+      node.position = node.position.clone();
       node.parent = forestGroup;
     });
 
     forestGroup.position.set(x,0,z);
     forestGroup.scaling.setAll(scale);
 
+    forestGroup.computeWorldMatrix(true);
+
     console.log("Forest area loaded:",x,z);
+    console.log("Imported meshes:",result.meshes.length);
+    console.log("Forest position:",forestGroup.position.asArray());
   }
 
   async function loadForests() {
