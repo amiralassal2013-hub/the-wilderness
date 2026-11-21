@@ -32,6 +32,34 @@ html, body {
 const canvas = document.getElementById("game");
 const engine = new BABYLON.Engine(canvas, true);
 
+function hill(x, z, cx, cz, height, width) {
+  const dx = (x - cx) / width;
+  const dz = (z - cz) / width;
+  return height * Math.exp(-(dx * dx + dz * dz) * 0.5);
+}
+
+// RASHAYA-INSPIRED TERRAIN
+function terrainHeight(x, z) {
+  let h = 0;
+
+  // Gentle natural rolling ground
+  h += 1.8 * Math.sin(x * 0.025) * Math.cos(z * 0.025);
+  h += 1.2 * Math.sin((x + z) * 0.035);
+
+  // Broad Lebanese hills
+  h += hill(x, z, -85, -35, 17, 38);
+  h += hill(x, z, -45, 65, 14, 42);
+  h += hill(x, z, 60, 75, 21, 45);
+  h += hill(x, z, 85, -35, 17, 38);
+  h += hill(x, z, -75, 105, 13, 40);
+  h += hill(x, z, 55, -105, 15, 42);
+
+  // A lower valley through the middle
+  h -= hill(x, z, 0, 5, 3.5, 45);
+
+  return h;
+}
+
 const createScene = function () {
   const scene = new BABYLON.Scene(engine);
   scene.clearColor = new BABYLON.Color4(0.53, 0.73, 0.87, 1);
@@ -42,21 +70,23 @@ const createScene = function () {
     new BABYLON.Vector3(0, 1, 0),
     scene
   );
-  light.intensity = 0.9;
+  light.intensity = 0.95;
 
-  // TERRAIN HEIGHT FUNCTION
-  function terrainHeight(x, z) {
-    return (
-      3.0 * Math.sin(x * 0.035) * Math.cos(z * 0.03) +
-      1.8 * Math.sin((x + z) * 0.045) +
-      1.2 * Math.cos(z * 0.065) * Math.sin(x * 0.025)
-    );
-  }
+  const sun = new BABYLON.DirectionalLight(
+    "sun",
+    new BABYLON.Vector3(-0.5, -1, 0.4),
+    scene
+  );
+  sun.intensity = 0.55;
 
-  // HILLY GROUND
+  // CREATE TERRAIN
   const ground = BABYLON.MeshBuilder.CreateGround(
     "ground",
-    { width: 300, height: 300, subdivisions: 100 },
+    {
+      width: 300,
+      height: 300,
+      subdivisions: 150
+    },
     scene
   );
 
@@ -67,6 +97,7 @@ const createScene = function () {
   for (let i = 0; i < positions.length; i += 3) {
     const x = positions[i];
     const z = positions[i + 2];
+
     positions[i + 1] = terrainHeight(x, z);
   }
 
@@ -77,6 +108,7 @@ const createScene = function () {
 
   const indices = ground.getIndices();
   const normals = [];
+
   BABYLON.VertexData.ComputeNormals(
     positions,
     indices,
@@ -88,10 +120,16 @@ const createScene = function () {
     normals
   );
 
+  ground.refreshBoundingInfo();
+
   // GROUND TEXTURE
-  const groundMat = new BABYLON.StandardMaterial("groundMat", scene);
+  const groundMat = new BABYLON.StandardMaterial(
+    "groundMat",
+    scene
+  );
+
   groundMat.diffuseColor = new BABYLON.Color3(1, 1, 1);
-  groundMat.specularColor = new BABYLON.Color3(0.05, 0.05, 0.05);
+  groundMat.specularColor = new BABYLON.Color3(0.04, 0.04, 0.04);
 
   const groundTexture = new BABYLON.Texture(
     "forrest_ground_01_diff_1k.jpg",
@@ -100,12 +138,12 @@ const createScene = function () {
     false,
     BABYLON.Texture.TRILINEAR_SAMPLINGMODE,
     function () {
-      groundMat.diffuseTexture = groundTexture;
       groundTexture.uScale = 12;
       groundTexture.vScale = 12;
+      groundMat.diffuseTexture = groundTexture;
     },
     function (message, exception) {
-      console.error("Ground texture failed:", message, exception);
+      console.error("Texture loading error:", message, exception);
     }
   );
 
@@ -115,33 +153,52 @@ const createScene = function () {
   scene.collisionsEnabled = true;
   ground.checkCollisions = true;
 
-  // MOUNTAINS
-  const mountainMat = new BABYLON.StandardMaterial("mountainMat", scene);
-  mountainMat.diffuseColor = new BABYLON.Color3(0.38, 0.39, 0.36);
+  // DISTANT MOUNTAINS
+  const mountainMat = new BABYLON.StandardMaterial(
+    "mountainMat",
+    scene
+  );
+
+  mountainMat.diffuseColor = new BABYLON.Color3(
+    0.39, 0.40, 0.38
+  );
 
   for (let i = 0; i < 18; i++) {
     const angle = (i / 18) * Math.PI * 2;
-    const distance = 115;
+    const distance = 170;
 
     const mountain = BABYLON.MeshBuilder.CreateSphere(
       "mountain",
-      { diameter: 1, segments: 5 },
+      { diameter: 1, segments: 6 },
       scene
     );
 
-    const size = 25 + Math.random() * 20;
-    mountain.scaling.set(size, size * 1.8, size);
+    const size = 25 + Math.random() * 25;
+
+    mountain.scaling.set(
+      size,
+      size * 1.7,
+      size * 0.8
+    );
+
     mountain.position.set(
       Math.cos(angle) * distance,
       size * 0.8,
       Math.sin(angle) * distance
     );
+
     mountain.material = mountainMat;
   }
 
   // ROCKS
-  const rockMat = new BABYLON.StandardMaterial("rockMat", scene);
-  rockMat.diffuseColor = new BABYLON.Color3(0.42, 0.41, 0.37);
+  const rockMat = new BABYLON.StandardMaterial(
+    "rockMat",
+    scene
+  );
+
+  rockMat.diffuseColor = new BABYLON.Color3(
+    0.42, 0.41, 0.37
+  );
 
   for (let i = 0; i < 28; i++) {
     const rock = BABYLON.MeshBuilder.CreateSphere(
@@ -155,17 +212,19 @@ const createScene = function () {
     const z = Math.random() * 180 - 90;
 
     rock.scaling.set(size, size * 0.6, size);
+
     rock.position.set(
       x,
       terrainHeight(x, z) + size * 0.25,
       z
     );
+
     rock.material = rockMat;
   }
 
   // FIRST-PERSON CAMERA
   const startX = 0;
-  const startZ = -12;
+  const startZ = -30;
 
   const camera = new BABYLON.UniversalCamera(
     "camera",
@@ -180,16 +239,17 @@ const createScene = function () {
   camera.attachControl(canvas, true);
   camera.speed = 0.35;
   camera.angularSensibility = 4000;
+
   camera.keysUp.push(87);
   camera.keysDown.push(83);
   camera.keysLeft.push(65);
   camera.keysRight.push(68);
-  camera.minZ = 0.1;
 
+  camera.minZ = 0.1;
   camera.checkCollisions = true;
   camera.applyGravity = true;
   camera.ellipsoid = new BABYLON.Vector3(0.5, 1, 0.5);
-  camera.ellipsoidOffset = new BABYLON.Vector3(0, 1, 0);
+
   scene.gravity = new BABYLON.Vector3(0, -0.15, 0);
 
   // DISTANCE FOG
@@ -210,7 +270,5 @@ window.addEventListener("resize", function () {
   engine.resize();
 });
 </script>
-</body>
-</html>
 </body>
 </html>
