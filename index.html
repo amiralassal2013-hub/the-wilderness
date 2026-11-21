@@ -213,6 +213,49 @@ const createScene = function () {
     rock.material = rockMat;
   }
 
+  // LOW-POLY GRASS (lightweight for older computers)
+  const grassMat = new BABYLON.StandardMaterial("grassMat", scene);
+  grassMat.diffuseColor = new BABYLON.Color3(0.20, 0.34, 0.12);
+  grassMat.specularColor = BABYLON.Color3.Black();
+
+  // One small clump made from three crossed blades.
+  const grassBlades = [];
+  for (let i = 0; i < 3; i++) {
+    const blade = BABYLON.MeshBuilder.CreatePlane(
+      "grassBlade",
+      { width: 0.16, height: 0.62, sideOrientation: BABYLON.Mesh.DOUBLESIDE },
+      scene
+    );
+    blade.position.y = 0.31;
+    blade.rotation.y = i * Math.PI / 3;
+    grassBlades.push(blade);
+  }
+
+  const grassClump = BABYLON.Mesh.MergeMeshes(
+    grassBlades, true, true, undefined, false, true
+  );
+  grassClump.name = "grassClump";
+  grassClump.material = grassMat;
+  grassClump.isPickable = false;
+
+  // Thin instances draw many clumps using one small mesh.
+  const grassCount = 750;
+  const grassMatrices = new Float32Array(grassCount * 16);
+  for (let i = 0; i < grassCount; i++) {
+    const x = Math.random() * 250 - 125;
+    const z = Math.random() * 250 - 125;
+    const scale = 0.75 + Math.random() * 0.75;
+    const yaw = Math.random() * Math.PI * 2;
+    const matrix = BABYLON.Matrix.Compose(
+      new BABYLON.Vector3(scale, scale, scale),
+      BABYLON.Quaternion.RotationYawPitchRoll(yaw, 0, 0),
+      new BABYLON.Vector3(x, terrainHeight(x, z), z)
+    );
+    matrix.copyToArray(grassMatrices, i * 16);
+  }
+  grassClump.thinInstanceSetBuffer("matrix", grassMatrices, 16, true);
+  grassClump.freezeWorldMatrix();
+
   // FIRST-PERSON CAMERA
   const startX = 0;
   const startZ = -30;
