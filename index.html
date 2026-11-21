@@ -213,48 +213,69 @@ const createScene = function () {
     rock.material = rockMat;
   }
 
-  // LOW-POLY GRASS (lightweight for older computers)
-  const grassMat = new BABYLON.StandardMaterial("grassMat", scene);
-  grassMat.diffuseColor = new BABYLON.Color3(0.20, 0.34, 0.12);
-  grassMat.specularColor = BABYLON.Color3.Black();
+  // NATURAL-LOOKING LOW-POLY GRASS
+  // Several curved-looking tapered blades per clump, using simple geometry.
+  const grassMaterials = [];
+  [
+    new BABYLON.Color3(0.16, 0.29, 0.09),
+    new BABYLON.Color3(0.22, 0.36, 0.11),
+    new BABYLON.Color3(0.29, 0.40, 0.14),
+    new BABYLON.Color3(0.12, 0.25, 0.08)
+  ].forEach((color, i) => {
+    const material = new BABYLON.StandardMaterial("grassTone" + i, scene);
+    material.diffuseColor = color;
+    material.specularColor = BABYLON.Color3.Black();
+    grassMaterials.push(material);
+  });
 
-  // One small clump made from three crossed blades.
-  const grassBlades = [];
-  for (let i = 0; i < 3; i++) {
-    const blade = BABYLON.MeshBuilder.CreatePlane(
-      "grassBlade",
-      { width: 0.16, height: 0.62, sideOrientation: BABYLON.Mesh.DOUBLESIDE },
-      scene
-    );
-    blade.position.y = 0.31;
-    blade.rotation.y = i * Math.PI / 3;
-    grassBlades.push(blade);
+  const grassSources = [];
+  for (let variant = 0; variant < grassMaterials.length; variant++) {
+    const blades = [];
+    for (let i = 0; i < 7; i++) {
+      const height = 0.38 + Math.random() * 0.42;
+      const width = 0.055 + Math.random() * 0.055;
+      const blade = BABYLON.MeshBuilder.CreateCylinder("grassBlade", {
+        height,
+        diameterTop: 0.006,
+        diameterBottom: width,
+        tessellation: 3
+      }, scene);
+      blade.position.x = (Math.random() - 0.5) * 0.24;
+      blade.position.z = (Math.random() - 0.5) * 0.24;
+      blade.position.y = height / 2;
+      blade.rotation.z = (Math.random() - 0.5) * 0.42;
+      blade.rotation.x = (Math.random() - 0.5) * 0.42;
+      blade.rotation.y = Math.random() * Math.PI;
+      blades.push(blade);
+    }
+    const clump = BABYLON.Mesh.MergeMeshes(blades, true, true, undefined, false, true);
+    clump.name = "grassClumpVariant" + variant;
+    clump.material = grassMaterials[variant];
+    clump.isPickable = false;
+    grassSources.push(clump);
   }
 
-  const grassClump = BABYLON.Mesh.MergeMeshes(
-    grassBlades, true, true, undefined, false, true
-  );
-  grassClump.name = "grassClump";
-  grassClump.material = grassMat;
-  grassClump.isPickable = false;
-
-  // Thin instances draw many clumps using one small mesh.
-  const grassCount = 750;
-  const grassMatrices = new Float32Array(grassCount * 16);
-  for (let i = 0; i < grassCount; i++) {
-    const x = Math.random() * 250 - 125;
-    const z = Math.random() * 250 - 125;
-    const scale = 0.75 + Math.random() * 0.75;
-    const yaw = Math.random() * Math.PI * 2;
-    const matrix = BABYLON.Matrix.Compose(
-      new BABYLON.Vector3(scale, scale, scale),
-      BABYLON.Quaternion.RotationYawPitchRoll(yaw, 0, 0),
-      new BABYLON.Vector3(x, terrainHeight(x, z), z)
-    );
-    matrix.copyToArray(grassMatrices, i * 16);
+  // Distribute clumps unevenly in patches, leaving natural bare areas.
+  const patchCount = 34;
+  for (let p = 0; p < patchCount; p++) {
+    const centerX = Math.random() * 250 - 125;
+    const centerZ = Math.random() * 250 - 125;
+    const clumpsInPatch = 12 + Math.floor(Math.random() * 15);
+    for (let i = 0; i < clumpsInPatch; i++) {
+      const source = grassSources[Math.floor(Math.random() * grassSources.length)];
+      const x = centerX + (Math.random() - 0.5) * 18;
+      const z = centerZ + (Math.random() - 0.5) * 18;
+      const scale = 0.65 + Math.random() * 0.85;
+      const yaw = Math.random() * Math.PI * 2;
+      const matrix = BABYLON.Matrix.Compose(
+        new BABYLON.Vector3(scale, scale, scale),
+        BABYLON.Quaternion.RotationYawPitchRoll(yaw, 0, 0),
+        new BABYLON.Vector3(x, terrainHeight(x, z), z)
+      );
+      source.thinInstanceAdd(matrix);
+    }
   }
-  grassClump.thinInstanceSetBuffer("matrix", grassMatrices, 16, true);
-  grassClump.freezeWorldMatrix();
+  grassSources.forEach(mesh => mesh.freezeWorldMatrix());
 
   // FIRST-PERSON CAMERA
   const startX = 0;
