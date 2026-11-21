@@ -255,17 +255,19 @@ const createScene = function () {
     grassSources.push(clump);
   }
 
-  // Distribute clumps unevenly in patches, leaving natural bare areas.
-  const patchCount = 65;
-  for (let p = 0; p < patchCount; p++) {
-    const centerX = Math.random() * 250 - 125;
-    const centerZ = Math.random() * 250 - 125;
-    const clumpsInPatch = 22 + Math.floor(Math.random() * 19);
-    for (let i = 0; i < clumpsInPatch; i++) {
+  // Cover the entire 300 x 300 ground with a staggered grid.
+  // Small random offsets keep the pattern from looking artificial.
+  const grassRows = 72;
+  const grassColumns = 72;
+  const groundCoverage = 290;
+  for (let row = 0; row < grassRows; row++) {
+    for (let col = 0; col < grassColumns; col++) {
       const source = grassSources[Math.floor(Math.random() * grassSources.length)];
-      const x = centerX + (Math.random() - 0.5) * 18;
-      const z = centerZ + (Math.random() - 0.5) * 18;
-      const scale = 0.65 + Math.random() * 0.85;
+      const spacingX = groundCoverage / (grassColumns - 1);
+      const spacingZ = groundCoverage / (grassRows - 1);
+      const x = -groundCoverage / 2 + col * spacingX + (Math.random() - 0.5) * 1.8;
+      const z = -groundCoverage / 2 + row * spacingZ + (Math.random() - 0.5) * 1.8;
+      const scale = 1.0 + Math.random() * 0.8;
       const yaw = Math.random() * Math.PI * 2;
       const matrix = BABYLON.Matrix.Compose(
         new BABYLON.Vector3(scale, scale, scale),
