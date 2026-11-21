@@ -99,18 +99,6 @@ const createGame = () => {
   const grass = material("Grass",
     new BABYLON.Color3(0.24,0.39,0.17));
 
-  const trunk = material("Tree Bark",
-    new BABYLON.Color3(0.27,0.16,0.09));
-
-  const leaves = material("Leaves",
-    new BABYLON.Color3(0.12,0.29,0.12));
-
-  const leaves2 = material("Light Leaves",
-    new BABYLON.Color3(0.19,0.36,0.16));
-
-  const birdMat = material("Bird Feathers",
-    new BABYLON.Color3(0.76,0.75,0.68));
-
   const rockMat = material("Rock",
     new BABYLON.Color3(0.38,0.39,0.34));
 
@@ -196,79 +184,6 @@ const createGame = () => {
     mountain.material=rockMat;
   }
 
-  // SCATTERED TREES
-
-  function makeTree(x,z,scale) {
-    const y=terrainHeight(x,z);
-
-    const wood=BABYLON.MeshBuilder.CreateCylinder(
-      "tree trunk",{
-        height:5*scale,
-        diameter:0.55*scale
-      },scene
-    );
-
-    wood.position.set(x,y+2.5*scale,z);
-    wood.material=trunk;
-
-    const top=BABYLON.MeshBuilder.CreateCylinder(
-      "tree crown",{
-        height:6*scale,
-        diameterTop:0,
-        diameterBottom:5*scale,
-        tessellation:7
-      },scene
-    );
-
-    top.position.set(x,y+6*scale,z);
-    top.material=leaves;
-
-    const middle=BABYLON.MeshBuilder.CreateCylinder(
-      "tree leaves",{
-        height:5*scale,
-        diameterTop:0,
-        diameterBottom:4*scale,
-        tessellation:7
-      },scene
-    );
-
-    middle.position.set(x,y+8*scale,z);
-    middle.material=leaves2;
-
-    if(Math.random()<0.22) {
-      const bird=BABYLON.MeshBuilder.CreateSphere(
-        "resting bird",{
-          diameter:0.65*scale,
-          segments:6
-        },scene
-      );
-
-      bird.scaling.set(1,0.65,1.5);
-      bird.position.set(x+1.1*scale,y+7.5*scale,z);
-      bird.material=birdMat;
-
-      const wing=BABYLON.MeshBuilder.CreateSphere(
-        "bird wing",{
-          diameter:0.4*scale,
-          segments:5
-        },scene
-      );
-
-      wing.scaling.set(1.7,0.3,0.8);
-      wing.position.set(x+1.1*scale,y+7.7*scale,z);
-      wing.material=leaves2;
-    }
-  }
-
-  for(let i=0;i<65;i++) {
-    const x=(Math.random()-0.5)*170;
-    const z=(Math.random()-0.5)*170;
-
-    if(Math.sqrt(x*x+(z+12)*(z+12))<11) continue;
-
-    makeTree(x,z,0.8+Math.random()*0.65);
-  }
-
   // SCATTERED ROCKS
 
   for(let i=0;i<28;i++) {
@@ -304,14 +219,11 @@ const createGame = () => {
       scene
     );
 
-    // Create a container without changing the imported hierarchy.
     const forestGroup = new BABYLON.TransformNode(
       "Forest Area",
       scene
     );
 
-    // Keep each imported mesh in its original hierarchy.
-    // Move only the top-level imported nodes.
     const importedNodes = [
       ...result.transformNodes,
       ...result.meshes
