@@ -233,15 +233,15 @@ const createScene = function () {
     const blades = [];
     for (let i = 0; i < 7; i++) {
       const height = 0.38 + Math.random() * 0.42;
-      const width = 0.055 + Math.random() * 0.055;
+      const width = 0.11 + Math.random() * 0.09;
       const blade = BABYLON.MeshBuilder.CreateCylinder("grassBlade", {
         height,
         diameterTop: 0.006,
         diameterBottom: width,
         tessellation: 3
       }, scene);
-      blade.position.x = (Math.random() - 0.5) * 0.24;
-      blade.position.z = (Math.random() - 0.5) * 0.24;
+      blade.position.x = (Math.random() - 0.5) * 1.05;
+      blade.position.z = (Math.random() - 0.5) * 1.05;
       blade.position.y = height / 2;
       blade.rotation.z = (Math.random() - 0.5) * 0.42;
       blade.rotation.x = (Math.random() - 0.5) * 0.42;
@@ -257,8 +257,8 @@ const createScene = function () {
 
   // Cover the entire 300 x 300 ground with a staggered grid.
   // Small random offsets keep the pattern from looking artificial.
-  const grassRows = 72;
-  const grassColumns = 72;
+  const grassRows = 145;
+  const grassColumns = 145;
   const groundCoverage = 290;
   for (let row = 0; row < grassRows; row++) {
     for (let col = 0; col < grassColumns; col++) {
@@ -267,7 +267,7 @@ const createScene = function () {
       const spacingZ = groundCoverage / (grassRows - 1);
       const x = -groundCoverage / 2 + col * spacingX + (Math.random() - 0.5) * 1.8;
       const z = -groundCoverage / 2 + row * spacingZ + (Math.random() - 0.5) * 1.8;
-      const scale = 1.0 + Math.random() * 0.8;
+      const scale = 1.15 + Math.random() * 0.65;
       const yaw = Math.random() * Math.PI * 2;
       const matrix = BABYLON.Matrix.Compose(
         new BABYLON.Vector3(scale, scale, scale),
