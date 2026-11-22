@@ -306,7 +306,22 @@ const createScene = function () {
       return;
     }
 
-    // Use each imported mesh directly first. Clone only after the source is visible.
+    // Make the bark material read clearly as natural wood while keeping its
+    // downloaded Poly Haven bark texture connected.
+    scene.materials.forEach(function (material) {
+      if (material.name && material.name.toLowerCase().includes("bark")) {
+        if (material.albedoColor) {
+          material.albedoColor = new BABYLON.Color3(0.82, 0.67, 0.48);
+        }
+        if (material.diffuseColor) {
+          material.diffuseColor = new BABYLON.Color3(0.82, 0.67, 0.48);
+        }
+        if (material.roughness !== undefined) material.roughness = 0.92;
+      }
+    });
+
+    // The downloaded asset is a small sapling, so enlarge it for a forest tree.
+    // Keep the original textured meshes visible and scale all copies consistently.
     sources.forEach(function (source, index) {
       source.setEnabled(true);
       source.isVisible = true;
@@ -316,7 +331,7 @@ const createScene = function () {
         terrainHeight(pinePositions[index][0], pinePositions[index][1]),
         pinePositions[index][1]
       );
-      source.scaling.setAll(5.5);
+      source.scaling.setAll(11.5);
       source.rotation.y = index * 1.7;
     });
 
@@ -332,7 +347,7 @@ const createScene = function () {
         terrainHeight(pinePositions[i][0], pinePositions[i][1]),
         pinePositions[i][1]
       );
-      tree.scaling.setAll(5.0 + (i % 4) * 0.3);
+      tree.scaling.setAll(10.5 + (i % 4) * 0.45);
       tree.rotation.y = (i * 2.17) % (Math.PI * 2);
     }
 
