@@ -281,8 +281,8 @@ const createScene = function () {
   grassSources.forEach(mesh => mesh.freezeWorldMatrix());
 
   // POLY HAVEN PINE FOREST
-  // Load the supplied textured glTF once, then share its geometry across instances.
-  // This keeps the forest lighter than importing a separate model for every tree.
+  // Import all three supplied Poly Haven tree variants. Clone their meshes
+  // (sharing geometry) instead of relying on GPU instances for multi-material glTF.
   const pinePositions = [
     [-72,-92],[-105,-25],[-82,38],[-48,105],
     [48,105],[82,35],[108,-28],[72,-100],
@@ -297,48 +297,49 @@ const createScene = function () {
     "pine_sapling_small_1k.gltf",
     scene
   ).then(function (result) {
-    const variants = result.meshes.filter(function (mesh) {
-      return /pine_sapling_small_[abc]/i.test(mesh.name) &&
-        mesh.getTotalVertices && mesh.getTotalVertices() > 100;
+    const sources = result.meshes.filter(function (mesh) {
+      return mesh.getTotalVertices && mesh.getTotalVertices() > 100;
     });
 
-    const pineSource = variants.find(function (mesh) {
-      return /pine_sapling_small_a/i.test(mesh.name);
-    }) || variants[0];
-
-    if (!pineSource) {
-      console.error("Poly Haven pine model loaded, but no tree mesh was found.", result);
+    if (sources.length === 0) {
+      console.error("Poly Haven glTF loaded but contained no visible tree meshes.", result.meshes);
       return;
     }
 
-    // Keep one source variant; the other supplied size variants are not needed.
-    variants.forEach(function (mesh) {
-      if (mesh !== pineSource) mesh.setEnabled(false);
+    // Keep each imported variant as a hidden geometry/material source.
+    sources.forEach(function (source) {
+      source.setEnabled(false);
+      source.isVisible = false;
     });
 
-    pineSource.position.set(
-      pinePositions[0][0],
-      terrainHeight(pinePositions[0][0], pinePositions[0][1]),
-      pinePositions[0][1]
-    );
-    pineSource.scaling.setAll(5.5);
-    pineSource.rotation.y = 0;
-    pineSource.isPickable = false;
+    pinePositions.forEach(function (spot, index) {
+      const source = sources[index % sources.length];
+      const x = spot[0];
+      const z = spot[1];
+      const root = new BABYLON.TransformNode("polyHavenPineRoot_" + index, scene);
+      root.position.set(x, terrainHeight(x, z), z);
+      const scale = 5.0 + (index % 4) * 0.3;
+      root.scaling.setAll(scale);
+      root.rotation.y = (index * 2.17) % (Math.PI * 2);
 
-    for (let i = 1; i < pinePositions.length; i++) {
-      const x = pinePositions[i][0];
-      const z = pinePositions[i][1];
-      const tree = pineSource.createInstance("polyHavenPine_" + i);
-      const scale = 4.8 + (i % 4) * 0.35;
-      tree.position.set(x, terrainHeight(x, z), z);
-      tree.scaling.setAll(scale);
-      tree.rotation.y = (i * 2.17) % (Math.PI * 2);
-      tree.isPickable = false;
-    }
+      const treeMesh = source.clone("polyHavenPine_" + index, root, true);
+      if (!treeMesh) {
+        console.warn("Could not clone Poly Haven pine variant", index);
+        root.dispose();
+        return;
+      }
+      treeMesh.setEnabled(true);
+      treeMesh.isVisible = true;
+      treeMesh.position.set(0, 0, 0);
+      treeMesh.rotation.set(0, 0, 0);
+      treeMesh.scaling.setAll(1);
+      treeMesh.isPickable = false;
+    });
 
-    console.log("Loaded textured Poly Haven pine trees:", pinePositions.length);
+    console.log("Poly Haven pine variants loaded:", sources.length,
+      "trees placed:", pinePositions.length);
   }).catch(function (error) {
-    console.error("Could not load the Poly Haven pine model:", error);
+    console.error("Could not load the Poly Haven pine model or its textures:", error);
   });
 
   // FIRST-PERSON CAMERA
