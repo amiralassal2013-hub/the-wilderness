@@ -66,46 +66,6 @@ const createScene = function () {
   const scene = new BABYLON.Scene(engine);
   scene.clearColor = new BABYLON.Color4(0.53, 0.73, 0.87, 1);
 
-  // HDRI ENVIRONMENT: Mossy Forest 2K
-  // Use a modest cubemap size to keep loading and rendering reasonable
-  // on older integrated graphics.
-  try {
-    const hdriTexture = new BABYLON.EXRCubeTexture(
-      "./mossy_forest_2k.exr",
-      scene,
-      512,
-      false,
-      true,
-      false,
-      true
-    );
-    scene.environmentTexture = hdriTexture;
-
-    // Show the same HDRI as the distant 360-degree sky.
-    const hdriSkybox = BABYLON.MeshBuilder.CreateBox(
-      "hdriSkybox",
-      { size: 1000 },
-      scene
-    );
-    const hdriSkyboxMaterial = new BABYLON.StandardMaterial(
-      "hdriSkyboxMaterial",
-      scene
-    );
-    hdriSkyboxMaterial.backFaceCulling = false;
-    hdriSkyboxMaterial.disableLighting = true;
-    hdriSkyboxMaterial.diffuseColor = BABYLON.Color3.Black();
-    hdriSkyboxMaterial.specularColor = BABYLON.Color3.Black();
-    hdriSkyboxMaterial.reflectionTexture = hdriTexture.clone();
-    hdriSkyboxMaterial.reflectionTexture.coordinatesMode =
-      BABYLON.Texture.SKYBOX_MODE;
-    hdriSkyboxMaterial.disableDepthWrite = true;
-    hdriSkybox.material = hdriSkyboxMaterial;
-    hdriSkybox.infiniteDistance = true;
-    hdriSkybox.isPickable = false;
-  } catch (error) {
-    console.error("Could not initialize the HDRI environment:", error);
-  }
-
   // LIGHTING
   const light = new BABYLON.HemisphericLight(
     "light",
