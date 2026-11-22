@@ -315,15 +315,15 @@ const createScene = function () {
   }
 
   function addVisibleWoodTrunk(x, z, index) {
-    // A simple tapered low-poly trunk reinforces the visible wooden stem.
-    const trunkHeight = 6.2;
+    // A tall, thick tapered trunk rises from the terrain into the pine canopy.
+    const trunkHeight = 14.5;
     const trunk = BABYLON.MeshBuilder.CreateCylinder(
       "pineWoodTrunk_" + index,
       {
         height: trunkHeight,
-        diameterTop: 0.22,
-        diameterBottom: 0.72,
-        tessellation: 7
+        diameterTop: 0.48,
+        diameterBottom: 1.05,
+        tessellation: 8
       },
       scene
     );
@@ -333,9 +333,10 @@ const createScene = function () {
       terrainHeight(x, z) + trunkHeight / 2,
       z
     );
-    trunk.rotation.z = (index % 2 === 0 ? 1 : -1) * 0.035;
-    trunk.rotation.x = (index % 3 - 1) * 0.025;
+    trunk.rotation.z = (index % 2 === 0 ? 1 : -1) * 0.025;
+    trunk.rotation.x = (index % 3 - 1) * 0.02;
     trunk.isPickable = false;
+    trunk.checkCollisions = true;
   }
 
   BABYLON.SceneLoader.ImportMeshAsync(
