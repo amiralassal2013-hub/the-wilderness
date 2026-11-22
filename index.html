@@ -281,14 +281,62 @@ const createScene = function () {
   grassSources.forEach(mesh => mesh.freezeWorldMatrix());
 
   // POLY HAVEN PINE FOREST
-  // Keep the imported glTF meshes visible as the first trees, then clone them.
+  // Import the textured model, detach it from the glTF root, and ground it
+  // using its actual world-space bounding box. This prevents floating trees.
   const pinePositions = [
-    [-72,-92],[-105,-25],[-82,38],[-48,105],
-    [48,105],[82,35],[108,-28],[72,-100],
-    [-125,82],[125,78],[-118,-100],[118,-105],
-    [-95,-65],[-112,15],[-65,72],[-28,125],
-    [28,125],[65,72],[112,15],[95,-65]
+    [-18,-8], [20,8], [-32,22], [34,34],
+    [-58,-18], [58,-12], [-72,35], [75,42],
+    [-92,-52], [92,-48], [-105,15], [108,22],
+    [-78,82], [82,88], [-38,105], [42,112],
+    [-120,-92], [120,-88]
   ];
+
+  const pineBarkMaterial = new BABYLON.StandardMaterial("extraPineBark", scene);
+  pineBarkMaterial.diffuseColor = new BABYLON.Color3(0.25, 0.13, 0.065);
+  pineBarkMaterial.specularColor = new BABYLON.Color3(0.025, 0.02, 0.015);
+
+  function positionPine(mesh, x, z, scale, index) {
+    // Detach from the imported glTF root so its hidden parent transform
+    // cannot offset the tree above the ground.
+    if (mesh.parent) mesh.setParent(null);
+    mesh.rotationQuaternion = null;
+    mesh.rotation.set(0, (index * 1.71) % (Math.PI * 2), 0);
+    mesh.scaling.setAll(scale);
+    mesh.position.set(x, terrainHeight(x, z), z);
+    mesh.isVisible = true;
+    mesh.setEnabled(true);
+    mesh.isPickable = false;
+    mesh.computeWorldMatrix(true);
+
+    // Match the lowest point of the actual model to the terrain surface.
+    const bottomY = mesh.getBoundingInfo().boundingBox.minimumWorld.y;
+    mesh.position.y += terrainHeight(x, z) - bottomY;
+    mesh.computeWorldMatrix(true);
+  }
+
+  function addVisibleWoodTrunk(x, z, index) {
+    // A simple tapered low-poly trunk reinforces the visible wooden stem.
+    const trunkHeight = 6.2;
+    const trunk = BABYLON.MeshBuilder.CreateCylinder(
+      "pineWoodTrunk_" + index,
+      {
+        height: trunkHeight,
+        diameterTop: 0.22,
+        diameterBottom: 0.72,
+        tessellation: 7
+      },
+      scene
+    );
+    trunk.material = pineBarkMaterial;
+    trunk.position.set(
+      x,
+      terrainHeight(x, z) + trunkHeight / 2,
+      z
+    );
+    trunk.rotation.z = (index % 2 === 0 ? 1 : -1) * 0.035;
+    trunk.rotation.x = (index % 3 - 1) * 0.025;
+    trunk.isPickable = false;
+  }
 
   BABYLON.SceneLoader.ImportMeshAsync(
     "",
@@ -306,53 +354,38 @@ const createScene = function () {
       return;
     }
 
-    // Make the bark material read clearly as natural wood while keeping its
-    // downloaded Poly Haven bark texture connected.
+    // Preserve the downloaded bark texture and give it a natural warm wood tone.
     scene.materials.forEach(function (material) {
       if (material.name && material.name.toLowerCase().includes("bark")) {
         if (material.albedoColor) {
-          material.albedoColor = new BABYLON.Color3(0.82, 0.67, 0.48);
+          material.albedoColor = new BABYLON.Color3(0.92, 0.82, 0.68);
         }
         if (material.diffuseColor) {
-          material.diffuseColor = new BABYLON.Color3(0.82, 0.67, 0.48);
+          material.diffuseColor = new BABYLON.Color3(0.92, 0.82, 0.68);
         }
-        if (material.roughness !== undefined) material.roughness = 0.92;
       }
     });
 
-    // The downloaded asset is a small sapling, so enlarge it for a forest tree.
-    // Keep the original textured meshes visible and scale all copies consistently.
-    sources.forEach(function (source, index) {
-      source.setEnabled(true);
-      source.isVisible = true;
-      source.isPickable = false;
-      source.position.set(
-        pinePositions[index][0],
-        terrainHeight(pinePositions[index][0], pinePositions[index][1]),
-        pinePositions[index][1]
+    // Use all three downloaded tree variations, then share their geometry in clones.
+    pinePositions.forEach(function (position, index) {
+      const source = sources[index % sources.length];
+      const tree = index < sources.length
+        ? source
+        : source.clone("polyHavenPine_" + index);
+
+      if (!tree) return;
+
+      positionPine(
+        tree,
+        position[0],
+        position[1],
+        12.5 + (index % 3) * 0.5,
+        index
       );
-      source.scaling.setAll(11.5);
-      source.rotation.y = index * 1.7;
+      addVisibleWoodTrunk(position[0], position[1], index);
     });
 
-    for (let i = sources.length; i < pinePositions.length; i++) {
-      const source = sources[i % sources.length];
-      const tree = source.clone("polyHavenPine_" + i);
-      if (!tree) continue;
-      tree.setEnabled(true);
-      tree.isVisible = true;
-      tree.isPickable = false;
-      tree.position.set(
-        pinePositions[i][0],
-        terrainHeight(pinePositions[i][0], pinePositions[i][1]),
-        pinePositions[i][1]
-      );
-      tree.scaling.setAll(10.5 + (i % 4) * 0.45);
-      tree.rotation.y = (i * 2.17) % (Math.PI * 2);
-    }
-
-    console.log("Poly Haven pine meshes visible:", sources.length,
-      "additional copies:", pinePositions.length - sources.length);
+    console.log("Grounded Poly Haven pines created:", pinePositions.length);
   }).catch(function (error) {
     console.error("Could not load Poly Haven pine model:", error);
   });
